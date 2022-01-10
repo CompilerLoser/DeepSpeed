@@ -820,7 +820,8 @@ class MatMul:
 
     def __init__(self, layout, block, mode, trans_a=False, trans_b=False, bench=False):
         """Initialize the Block-Sparse MatMul class.
-
+        q*k -> layout, block, sdd, trans_a = False, trans_b = True.
+        w*v -> layout, block, dsd, trans_a = False, trans_b = False.
         Arguments:
              layout: required: sparsity layout tensor
              block: required: an integer determining the block size.
