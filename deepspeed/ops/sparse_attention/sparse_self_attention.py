@@ -8,7 +8,7 @@ import torch
 from torch import distributed as dist
 from collections import namedtuple
 from deepspeed.ops.sparse_attention import SparsityConfig
-
+import time
 
 class SparseSelfAttention(nn.Module):
     """Implements an efficient Sparse Self Attention of Transformer layer based on `Generative Modeling with Sparse Transformers`: https://arxiv.org/abs/1904.10509
@@ -126,7 +126,6 @@ class SparseSelfAttention(nn.Module):
         """
         assert query.dtype == torch.half, "sparse attention only supports training in fp16 currently, please file a github issue if you need fp32 support"
         bsz, num_heads, tgt_len, head_dim = query.size()
-
         # transpose back key if it is already transposed
         key = self.transpose_key_for_scores(key, tgt_len)
 
@@ -146,9 +145,8 @@ class SparseSelfAttention(nn.Module):
 
         # cache look-up table computations etc
         sparse_dot_sdd_nt, sparse_dot_dsd_nn, sparse_softmax = self.get_ops(num_heads, tgt_len)
-
         scaling = float(head_dim)**-0.5
-
+        compute_start = time.perf_counter()
         # attention scores
         attn_output_weights = sparse_dot_sdd_nt(query, key)
         attn_output_weights = sparse_softmax(
@@ -162,4 +160,4 @@ class SparseSelfAttention(nn.Module):
 
         # outputs
         attn_output = sparse_dot_dsd_nn(attn_output_weights, value)
-        return attn_output
+        return attn_output, compute_start

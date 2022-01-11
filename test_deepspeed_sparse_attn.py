@@ -5,14 +5,14 @@ from deepspeed.ops.sparse_attention.sparsity_config import BigBirdSparsityConfig
 import time
 import os
 
-batch_size = 128
-num_attention_heads = 1
+batch_size = 16
+num_attention_heads = 4
 size_per_head = 512
 num_rand_blocks = 3
 from_seq_length = 4096
 to_seq_length = 4096
-from_block_size = 64
-to_block_size = 64
+from_block_size = 32
+to_block_size = 32
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -43,8 +43,11 @@ attention_layer = SparseSelfAttention(
     sparsity_config=sparse_config, max_seq_length=4096
 ).cuda()
 
-attn_output = attention_layer(query_layer, key_layer, value_layer)
+attn_output, compute_start = attention_layer(query_layer, key_layer, value_layer)
 
 
 end = time.perf_counter()
-print(batch_size*num_attention_heads*from_seq_length/(end - start))
+print(end - start)
+print(end - compute_start)
+print((end - compute_start)/ (end - start)* 100)
+print(batch_size*num_attention_heads*from_seq_length/(end - start)/1000)
