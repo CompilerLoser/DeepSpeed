@@ -3,8 +3,9 @@ from torch import nn
 from deepspeed.ops.sparse_attention import SparseSelfAttention
 from deepspeed.ops.sparse_attention.sparsity_config import BigBirdSparsityConfig
 import time
+import os
 
-batch_size = 32
+batch_size = 128
 num_attention_heads = 1
 size_per_head = 512
 num_rand_blocks = 3
@@ -13,8 +14,9 @@ to_seq_length = 4096
 from_block_size = 64
 to_block_size = 64
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-torch.cuda.set_device(2)
+
 
 # only support training in fp16 currently
 query_layer = torch.rand(
