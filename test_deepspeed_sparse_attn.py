@@ -28,7 +28,7 @@ key_layer = torch.rand(
 value_layer = torch.rand(
     batch_size, num_attention_heads, to_seq_length, size_per_head
 ).half().cuda()
-
+print("**************")
 start = time.perf_counter()
 sparse_config = BigBirdSparsityConfig(
     num_heads=num_attention_heads,
@@ -38,11 +38,16 @@ sparse_config = BigBirdSparsityConfig(
     num_sliding_window_blocks=3,  # use default value in this config class
     num_global_blocks=1,  # also the FIXED window/global size in 'pytorch_bigbird' implementation
 )
-
+e_config = time.perf_counter()
+print("bigbird config class init")
+print(e_config - start)
+attn_class_start = time.perf_counter()
 attention_layer = SparseSelfAttention(
     sparsity_config=sparse_config, max_seq_length=4096
 ).cuda()
-
+attn_class_end = time.perf_counter()
+print("attn class init")
+print(attn_class_end - attn_class_start)
 attn_output, compute_start = attention_layer(query_layer, key_layer, value_layer)
 
 

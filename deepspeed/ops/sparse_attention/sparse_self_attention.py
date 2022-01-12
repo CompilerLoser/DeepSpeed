@@ -7,7 +7,7 @@ from torch.nn.functional import *
 import torch
 from torch import distributed as dist
 from collections import namedtuple
-from deepspeed.ops.sparse_attention import SparsityConfig
+from deepspeed.ops.sparse_attention import SparsityConfig, softmax
 import time
 
 class SparseSelfAttention(nn.Module):
@@ -127,6 +127,7 @@ class SparseSelfAttention(nn.Module):
         assert query.dtype == torch.half, "sparse attention only supports training in fp16 currently, please file a github issue if you need fp32 support"
         bsz, num_heads, tgt_len, head_dim = query.size()
         # transpose back key if it is already transposed
+        trans_if_need = time.perf_counter()
         key = self.transpose_key_for_scores(key, tgt_len)
 
         # check that operation is supported
@@ -142,13 +143,23 @@ class SparseSelfAttention(nn.Module):
         # squeeze attn_mask if it is given
         if attn_mask is not None:
             attn_mask = self.transpose_mask_for_sparse(query.dtype, attn_mask)
-
+        trans_if_need_e = time.perf_counter()
+        print("trans if need")
+        print(trans_if_need_e -trans_if_need)
+        __get_op_s = time.perf_counter()
         # cache look-up table computations etc
         sparse_dot_sdd_nt, sparse_dot_dsd_nn, sparse_softmax = self.get_ops(num_heads, tgt_len)
+        __get_op_e = time.perf_counter()
+        print("get op")
+        print(__get_op_e - __get_op_s)
         scaling = float(head_dim)**-0.5
         compute_start = time.perf_counter()
         # attention scores
         attn_output_weights = sparse_dot_sdd_nt(query, key)
+        compute_end = time.perf_counter()
+        print("sdd")
+        print(compute_end - compute_start)
+        softmax_s = time.perf_counter()
         attn_output_weights = sparse_softmax(
             attn_output_weights,
             scale=scaling,
@@ -158,6 +169,13 @@ class SparseSelfAttention(nn.Module):
             key_padding_mask_mode=self.key_padding_mask_mode,
             attn_mask_mode=self.attn_mask_mode)
 
+        soft_max_e = time.perf_counter()
+        print("softmax")
+        print(soft_max_e - softmax_s)
         # outputs
+        dsd_s = time.perf_counter()
         attn_output = sparse_dot_dsd_nn(attn_output_weights, value)
+        dsd_e = time.perf_counter()
+        print("dsd")
+        print(dsd_e - dsd_s)
         return attn_output, compute_start
