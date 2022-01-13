@@ -5,7 +5,7 @@ from deepspeed.ops.sparse_attention.sparsity_config import BigBirdSparsityConfig
 import time
 import os
 
-batch_size = 16
+batch_size = 2
 num_attention_heads = 4
 size_per_head = 512
 num_rand_blocks = 3
@@ -20,13 +20,13 @@ device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # only support training in fp16 currently
 query_layer = torch.rand(
-    batch_size, num_attention_heads, from_seq_length, size_per_head
+    batch_size, 1, num_attention_heads, from_seq_length, size_per_head
 ).half().cuda()
 key_layer = torch.rand(
-    batch_size, num_attention_heads, to_seq_length, size_per_head
+    batch_size, 1, num_attention_heads, to_seq_length, size_per_head
 ).half().cuda()
 value_layer = torch.rand(
-    batch_size, num_attention_heads, to_seq_length, size_per_head
+    batch_size, 1, num_attention_heads, to_seq_length, size_per_head
 ).half().cuda()
 
 start = time.perf_counter()
@@ -42,12 +42,10 @@ sparse_config = BigBirdSparsityConfig(
 attention_layer = SparseSelfAttention(
     sparsity_config=sparse_config, max_seq_length=4096
 ).cuda()
-
-attn_output, compute_start = attention_layer(query_layer, key_layer, value_layer)
+for i in range(batch_size):
+    attn_output = attention_layer(query_layer[i], key_layer[i], value_layer[i])
 
 
 end = time.perf_counter()
 print(end - start)
-print(end - compute_start)
-print((end - compute_start)/ (end - start)* 100)
 print(batch_size*num_attention_heads*from_seq_length/(end - start)/1000)

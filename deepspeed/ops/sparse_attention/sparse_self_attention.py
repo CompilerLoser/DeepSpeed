@@ -148,7 +148,10 @@ class SparseSelfAttention(nn.Module):
         scaling = float(head_dim)**-0.5
         compute_start = time.perf_counter()
         # attention scores
+        sdd_start = time.perf_counter()
         attn_output_weights = sparse_dot_sdd_nt(query, key)
+        sdd_end = time.perf_counter()
+        print("sdd time: ", sdd_end-sdd_start)
         attn_output_weights = sparse_softmax(
             attn_output_weights,
             scale=scaling,
