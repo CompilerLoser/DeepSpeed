@@ -20,13 +20,13 @@ device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # only support training in fp16 currently
 query_layer = torch.rand(
-    batch_size, num_attention_heads, from_seq_length, size_per_head
+    batch_size, 1, num_attention_heads, from_seq_length, size_per_head
 ).half().cuda()
 key_layer = torch.rand(
-    batch_size, num_attention_heads, to_seq_length, size_per_head
+    batch_size, 1, num_attention_heads, to_seq_length, size_per_head
 ).half().cuda()
 value_layer = torch.rand(
-    batch_size, num_attention_heads, to_seq_length, size_per_head
+    batch_size, 1, num_attention_heads, to_seq_length, size_per_head
 ).half().cuda()
 
 start = time.perf_counter()
@@ -41,7 +41,10 @@ sparse_config = BigBirdSparsityConfig(
 attention_layer = SparseSelfAttention(
     sparsity_config=sparse_config, max_seq_length=4096
 ).cuda()
-attn_output = attention_layer(query_layer, key_layer, value_layer)
+
+# all ops and lookup tables are cached after first batch.
+for bs in range(batch_size):
+    attn_output = attention_layer(query_layer[bs], key_layer[bs], value_layer[bs])
 
 
 end = time.perf_counter()
