@@ -41,6 +41,9 @@ sparse_config = BigBirdSparsityConfig(
 attention_layer = SparseSelfAttention(
     sparsity_config=sparse_config, max_seq_length=4096
 ).cuda()
+print("first batch ")
+attn_output = attention_layer(query_layer, key_layer, value_layer)
+print("second batch ")
 attn_output = attention_layer(query_layer, key_layer, value_layer)
 
 

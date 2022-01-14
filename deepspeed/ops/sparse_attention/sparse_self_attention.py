@@ -124,6 +124,7 @@ class SparseSelfAttention(nn.Module):
         Return:
              attn_output: a dense tensor containing attention context
         """
+        __start = time.perf_counter()
         assert query.dtype == torch.half, "sparse attention only supports training in fp16 currently, please file a github issue if you need fp32 support"
         bsz, num_heads, tgt_len, head_dim = query.size()
         # transpose back key if it is already transposed
@@ -142,11 +143,14 @@ class SparseSelfAttention(nn.Module):
         # squeeze attn_mask if it is given
         if attn_mask is not None:
             attn_mask = self.transpose_mask_for_sparse(query.dtype, attn_mask)
+        __get_ops = time.perf_counter()
         # cache look-up table computations etc
         sparse_dot_sdd_nt, sparse_dot_dsd_nn, sparse_softmax = self.get_ops(num_heads, tgt_len)
         scaling = float(head_dim)**-0.5
         # attention scores
+        __sdd = time.perf_counter()
         attn_output_weights = sparse_dot_sdd_nt(query, key)
+        __softmax = time.perf_counter()
         attn_output_weights = sparse_softmax(
             attn_output_weights,
             scale=scaling,
@@ -157,5 +161,12 @@ class SparseSelfAttention(nn.Module):
             attn_mask_mode=self.attn_mask_mode)
 
         # outputs
+        __dsd = time.perf_counter()
         attn_output = sparse_dot_dsd_nn(attn_output_weights, value)
+        __end = time.perf_counter()
+        print("tans if need ", __get_ops - __start)
+        print("get op ", __sdd - __get_ops)
+        print("sdd ", __softmax - __sdd)
+        print("softmax ", __dsd - __softmax)
+        print("dsd ", __end - __dsd)
         return attn_output
