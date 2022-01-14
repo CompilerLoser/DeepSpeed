@@ -38,15 +38,23 @@ sparse_config = BigBirdSparsityConfig(
     num_sliding_window_blocks=3,  # use default value in this config class
     num_global_blocks=1,  # also the FIXED window/global size in 'pytorch_bigbird' implementation
 )
+__init_bigbird_config_end = time.perf_counter()
 attention_layer = SparseSelfAttention(
     sparsity_config=sparse_config, max_seq_length=4096
 ).cuda()
-
+__init_attention_and_make_layout_end = time.perf_counter()
+t_each_batch = []
+t_each_batch.append(time.perf_counter())
 # all ops and lookup tables are cached after first batch.
 for bs in range(batch_size):
     attn_output = attention_layer(query_layer[bs], key_layer[bs], value_layer[bs])
-
+    t_each_batch.append(time.perf_counter())
 
 end = time.perf_counter()
+print("init BigBird config ", __init_bigbird_config_end - start)
+print("init attention class and make layout ", __init_attention_and_make_layout_end - __init_bigbird_config_end)
+for i in range(batch_size):
+    print("batch ", i)
+    print(t_each_batch[i+1] - t_each_batch[i])
 print(end - start)
 print(batch_size*num_attention_heads*from_seq_length/(end - start)/1000)
